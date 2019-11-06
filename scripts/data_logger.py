@@ -52,6 +52,6 @@ def node():
     # Close bag when node is finished
     bag.close()
 
-
+# "Main loop"
 if __name__ == "__main__":
     node()
