@@ -7,7 +7,7 @@ import rostopic
 from ros_system_monitor_msgs.msg import VehicleStatus
 from os.path import expanduser
 
-# Vehicle status
+# System status
 sys_status = VehicleStatus()
 
 # Callback for vehicle status
@@ -45,7 +45,7 @@ def node():
         # Record rosbag if system status is RECORDING
         if sys_status.status == 3:
             for topic in topics:
-                msg_class, _, _ = rostopic.get_topic_class(t)
+                msg_class, _, _ = rostopic.get_topic_class(topic)
                 topic_msg = rospy.wait_for_message(topic, msg_class)
                 bag.write(topic, topic_msg)
 
