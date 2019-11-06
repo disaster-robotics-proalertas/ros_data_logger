@@ -26,7 +26,6 @@ def node():
     rospy.Subscriber('/ros_system_monitor/%s/status' % vehicle_name, VehicleStatus, callback=sys_status_callback)
 
     # Get bag filename from parameter
-    now = datetime.now()
     bagname = rospy.get_param('~/log_filename', default="%s/log/%s.bag" % (expanduser("~"), datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
 
     # Define bag to be recorded
