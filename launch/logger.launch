@@ -1,0 +1,5 @@
+<launch>
+    <node name="data_logger" pkg="ros_data_logger" type="data_logger.py">
+        <rosparam command="load" file="$(find ros_data_logger)/param/common.yaml" />
+    </node>
+</launch>
