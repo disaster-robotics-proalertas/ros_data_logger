@@ -4,16 +4,16 @@ from datetime import datetime
 import rosbag
 import rospy
 import rostopic
-from ros_system_monitor_msgs.msg import VehicleStatus
+from system_monitor_msgs.msg import VehicleStatus
 from os.path import expanduser
 
 # System status
-sys_status = VehicleStatus()
+vehicle_status = VehicleStatus()
 
 # Callback for vehicle status
-def sys_status_callback(msg):
-    global sys_status
-    sys_status = msg
+def vehicle_status_callback(msg):
+    global vehicle_status
+    vehicle_status = msg
 
 def node():
     # Initialize node
@@ -23,7 +23,7 @@ def node():
     vehicle_name = rospy.get_param("/ros_system_monitor/vehicle_name")
 
     # Define subscribers
-    rospy.Subscriber('/ros_system_monitor/%s/status' % vehicle_name, VehicleStatus, callback=sys_status_callback)
+    rospy.Subscriber('/ros_system_monitor/%s/status' % vehicle_name, VehicleStatus, callback=vehicle_status_callback)
 
     # Get bag filename from parameter
     bagname = rospy.get_param('~/log_filename', default="%s/log/%s.bag" % (expanduser("~"), datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
@@ -42,8 +42,8 @@ def node():
 
     # Run while node is active
     while not rospy.is_shutdown():
-        # Record rosbag if system status is RECORDING
-        if sys_status.status == 3:
+        # Record rosbag if vehicle status is RECORDING
+        if vehicle_status.status == 3:
             for topic in topics:
                 msg_class, _, _ = rostopic.get_topic_class(topic)
                 topic_msg = rospy.wait_for_message(topic, msg_class)
