@@ -1,3 +1,4 @@
 record_all_topics: false
-topics: {/gps/fix,
-         /mavlink/rc/in}
+topics: 
+  - /gps/fix
+  - /mavlink/RC/in
