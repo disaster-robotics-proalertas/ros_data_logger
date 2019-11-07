@@ -46,8 +46,11 @@ def node():
         if vehicle_status.status == 3:
             for topic in topics:
                 msg_class, _, _ = rostopic.get_topic_class(topic)
-                topic_msg = rospy.wait_for_message(topic, msg_class)
-                bag.write(topic, topic_msg)
+                try:
+                    topic_msg = rospy.wait_for_message(topic, msg_class, timeout=5.0)
+                    bag.write(topic, topic_msg)
+                except rospy.ROSException:
+                    pass
 
     # Close bag when node is finished
     bag.close()
