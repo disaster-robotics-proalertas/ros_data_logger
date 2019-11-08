@@ -4,7 +4,7 @@ from datetime import datetime
 import rosbag
 import rospy
 import rostopic
-from system_monitor_msgs.msg import VehicleStatus
+from system_monitor.msg import VehicleStatus
 from os.path import expanduser
 
 # System status
