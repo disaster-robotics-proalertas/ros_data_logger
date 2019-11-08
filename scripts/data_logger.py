@@ -26,7 +26,7 @@ def node():
     rospy.Subscriber('/%s/status' % vehicle_name, VehicleStatus, callback=vehicle_status_callback)
 
     # Get bag filename from parameter
-    bagname = rospy.get_param('~/log_filename', default="%s/log/%s.bag" % (expanduser("~"), datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
+    bagname = rospy.get_param('~/log_filename', default="%s/ros-log/%s.bag" % (expanduser("~"), datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
     
     # Get flag indicating recording all topics or not
     record_all_topics = rospy.get_param("~record_all_topics", default=False)
