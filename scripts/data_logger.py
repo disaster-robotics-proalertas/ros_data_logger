@@ -4,6 +4,7 @@ from datetime import datetime
 import rosbag
 import rospy
 import rostopic
+import socket
 from system_monitor.msg import VehicleStatus
 import os
 
@@ -19,8 +20,8 @@ def node():
     # Initialize node
     rospy.init_node('data_logger', anonymous=True)
 
-    # Get vehicle name from parameter
-    vehicle_name = rospy.get_param("/asv_description/system_name")
+    # Get vehicle name from hostname
+    vehicle_name = socket.gethostname()
 
     # Define subscribers
     rospy.Subscriber('/%s/status' % vehicle_name, VehicleStatus, callback=vehicle_status_callback)
