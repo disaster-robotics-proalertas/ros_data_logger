@@ -24,7 +24,7 @@ def node():
     vehicle_name = socket.gethostname()
 
     # Define subscribers
-    rospy.Subscriber('/%s/vehicle/status' % vehicle_name, VehicleStatus, callback=vehicle_status_callback)
+    rospy.Subscriber('/system_monitor/%s/vehicle/status' % vehicle_name, VehicleStatus, callback=vehicle_status_callback)
 
     # Get logging path (and create if nonexistant)
     log_path = rospy.get_param("~log_path", default="%s/log" % os.path.expanduser("~"))
