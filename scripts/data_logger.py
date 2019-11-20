@@ -5,16 +5,16 @@ import rosbag
 import rospy
 import rostopic
 import socket
-from system_monitor.msg import VehicleStatus
+from system_monitor.msg import VehicleState
 import os
 
 # System status
-vehicle_status = VehicleStatus()
+vehicle_state = VehicleState()
 
 # Callback for vehicle status
-def vehicle_status_callback(msg):
-    global vehicle_status
-    vehicle_status = msg
+def vehicle_state_callback(msg):
+    global vehicle_state
+    vehicle_state = msg
 
 def node():
     # Initialize node
@@ -24,7 +24,7 @@ def node():
     vehicle_name = socket.gethostname()
 
     # Define subscribers
-    rospy.Subscriber('/system_monitor/%s/vehicle/status' % vehicle_name, VehicleStatus, callback=vehicle_status_callback)
+    rospy.Subscriber('/system_monitor/%s/vehicle/status' % vehicle_name, VehicleState, callback=vehicle_state_callback)
 
     # Get logging path (and create if nonexistant)
     log_path = rospy.get_param("~log_path", default="%s/log" % os.path.expanduser("~"))
@@ -43,17 +43,17 @@ def node():
 
     # Run while node is active
     while not rospy.is_shutdown():
-        # Record rosbag if vehicle status is RECORDING
-        if vehicle_status.status == 3: 
+        # Record rosbag if vehicle state is RECORDING
+        if vehicle_state.id == 3: 
             # Get bag filename from parameter
             bagname = "%s/%s.bag" % (log_path, datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
             # Define bag to be recorded
             bag = rosbag.Bag(bagname, 'w')
             
-            # Keep recording until status is no longer 3
+            # Keep recording until state is no longer 3
             rospy.loginfo("[data_logger] Recording rosbag as %s" % bagname)
             while 1:
-                if not vehicle_status.status == 3:
+                if not vehicle_state.id == 3:
                     break
                 for topic in topics:
                     msg_class, _, _ = rostopic.get_topic_class(topic)
