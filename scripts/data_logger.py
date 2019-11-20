@@ -28,7 +28,7 @@ def node():
 
     # Get logging path (and create if nonexistant)
     log_path = rospy.get_param("~log_path", default="%s/log" % os.path.expanduser("~"))
-    if not os.path.isfile(log_path):
+    if not os.path.isdir(log_path):
         rospy.loginfo("[data_logger] Log dir %s does not exist, creating..." % log_path)
         os.mkdir(log_path)
 
