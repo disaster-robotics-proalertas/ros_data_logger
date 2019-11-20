@@ -1,4 +1,4 @@
 record_all_topics: false
 topics: 
-  - /gps/fix
+  - /mavros/global_position/raw/fix
   - /mavros/RC/in
