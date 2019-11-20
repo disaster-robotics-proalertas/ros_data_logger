@@ -4,8 +4,9 @@ from datetime import datetime
 import rosbag
 import rospy
 import rostopic
+import socket
 from system_monitor.msg import VehicleStatus
-from os.path import expanduser
+import os
 
 # System status
 vehicle_status = VehicleStatus()
@@ -19,15 +20,18 @@ def node():
     # Initialize node
     rospy.init_node('data_logger', anonymous=True)
 
-    # Get vehicle name from parameter
-    vehicle_name = rospy.get_param("~system_name")
+    # Get vehicle name from hostname
+    vehicle_name = socket.gethostname()
 
     # Define subscribers
-    rospy.Subscriber('/%s/status' % vehicle_name, VehicleStatus, callback=vehicle_status_callback)
+    rospy.Subscriber('/system_monitor/%s/vehicle/status' % vehicle_name, VehicleStatus, callback=vehicle_status_callback)
 
-    # Get bag filename from parameter
-    bagname = rospy.get_param('~/log_filename', default="%s/ros-log/%s.bag" % (expanduser("~"), datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
-    
+    # Get logging path (and create if nonexistant)
+    log_path = rospy.get_param("~log_path", default="%s/log" % os.path.expanduser("~"))
+    if not os.path.isfile(log_path):
+        rospy.loginfo("[data_logger] Log dir %s does not exist, creating..." % log_path)
+        os.mkdir(log_path)
+
     # Get flag indicating recording all topics or not
     record_all_topics = rospy.get_param("~record_all_topics", default=False)
 
@@ -42,11 +46,12 @@ def node():
         # Record rosbag if vehicle status is RECORDING
         if vehicle_status.status == 3: 
             # Get bag filename from parameter
-            bagname = rospy.get_param('~/log_filename', default="%s/log/%s.bag" % (expanduser("~"), datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
+            bagname = "%s/%s.bag" % (log_path, datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
             # Define bag to be recorded
             bag = rosbag.Bag(bagname, 'w')
             
             # Keep recording until status is no longer 3
+            rospy.loginfo("[data_logger] Recording rosbag as %s" % bagname)
             while 1:
                 if not vehicle_status.status == 3:
                     break
@@ -60,9 +65,11 @@ def node():
                     
             # Close bag when status changes
             bag.close()
+            rospy.loginfo("[data_logger] Closed rosbag %s" % bagname)
 
     # Close bag when node is finished
     bag.close()
+    rospy.loginfo("[data_logger] Quitting, closed rosbag %s" % bagname)
 
 # "Main loop"
 if __name__ == "__main__":
