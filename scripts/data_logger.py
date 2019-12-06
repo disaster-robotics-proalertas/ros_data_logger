@@ -4,73 +4,85 @@ from datetime import datetime
 import rosbag
 import rospy
 import rostopic
+import rosgraph
 import socket
 from system_monitor.msg import VehicleState
+import threading
 import os
 
-# System status
-vehicle_state = VehicleState()
+class Logger:
+    def __init__(self, vehicle_name, **kwargs):
+        rospy.init_node("data_logger", anonymous=True)
 
-# Callback for vehicle status
-def vehicle_state_callback(msg):
-    global vehicle_state
-    vehicle_state = msg
+        # Set vehicle name
+        self.vehicle_name = vehicle_name
 
-def node():
-    # Initialize node
-    rospy.init_node('data_logger', anonymous=True)
+        # Define subscribers
+        rospy.Subscriber('/%s/vehicle/state' % self.vehicle_name, VehicleState, callback=self.state_callback)
+        
+        # Get logging path (and create if nonexistant)
+        self.log_path = rospy.get_param("~log_path", default="%s/log" % os.path.expanduser("~"))
+        if not os.path.isdir(self.log_path):
+            rospy.loginfo("[data_logger] Log dir %s does not exist, creating..." % self.log_path)
+            os.mkdir(self.log_path)
 
-    # Get vehicle name from hostname
-    vehicle_name = socket.gethostname()
+        # Get list of topics to be recorded
+        self.topics = rospy.get_param("~topics")
 
-    # Define subscribers
-    rospy.Subscriber('/%s/vehicle/state' % vehicle_name, VehicleState, callback=vehicle_state_callback)
+        # Define subscribers for topics we want to record
+        for topic in self.topics:
+            msg_class, _, _ = rostopic.get_topic_class(topic)
+            rospy.Subscriber(topic, msg_class, callback=self.topic_callback)
 
-    # Get logging path (and create if nonexistant)
-    log_path = rospy.get_param("~log_path", default="%s/log" % os.path.expanduser("~"))
-    if not os.path.isdir(log_path):
-        rospy.loginfo("[data_logger] Log dir %s does not exist, creating..." % log_path)
-        os.mkdir(log_path)
+        # Dictionary to hold messages we want to record
+        self.messages = {}
 
-    # Get flag indicating recording all topics or not
-    record_all_topics = rospy.get_param("~record_all_topics", default=False)
+        # Recording state
+        self.recording = False
+        self.active = False
+        
+    def record_bag(self):
+        bagname = "%s/%s_%s.bag" % (self.log_path, self.vehicle_name, datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
+        bagfile = rosbag.Bag(bagname, 'w')
+        while True:
+            if not self.recording:
+                break
+            for topic in self.topics:
+                if self.messages[topic][1]:
+                    bagfile.write(topic, self.messages[topic][0])
+                    self.messages[topic][1] = False
 
-    # Get list of topics to be recorded
-    if record_all_topics:
-        topics = rospy.get_published_topics()
-    else:
-        topics = rospy.get_param("~topics")
+        # Close bag successfully
+        bagfile.close()
 
-    # Run while node is active
-    while not rospy.is_shutdown():
-        # Record rosbag if vehicle state is RECORDING
-        if vehicle_state.id == 3: 
-            # Get bag filename from parameter
-            bagname = "%s/%s.bag" % (log_path, datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
-            # Define bag to be recorded
-            bag = rosbag.Bag(bagname, 'w')
-            
-            # Keep recording until state is no longer 3
-            rospy.loginfo("[data_logger] Recording rosbag as %s" % bagname)
-            while 1:
-                if not vehicle_state.id == 3:
-                    break
-                for topic in topics:
-                    msg_class, _, _ = rostopic.get_topic_class(topic)
-                    try:
-                        topic_msg = rospy.wait_for_message(topic, msg_class, timeout=5.0)
-                        bag.write(topic, topic_msg)
-                    except rospy.ROSException:
-                        pass
-                    
-            # Close bag when status changes
-            bag.close()
-            rospy.loginfo("[data_logger] Closed rosbag %s" % bagname)
+    def topic_callback(self, msg):
+        self.messages[msg._connection_header['topic']] = [msg, True]
 
-    # Close bag when node is finished
-    bag.close()
-    rospy.loginfo("[data_logger] Quitting, closed rosbag %s" % bagname)
+    def state_callback(self, msg):
+        if msg.id == 3:
+            self.recording = True
+        else:
+            self.recording = False
+
+    def run(self):
+        # Start or stop recording
+        if self.recording:
+            if not self.active:
+                # Run bag recording thread
+                rospy.loginfo("[data_logger] Recording data to %s" % self.log_path)
+                self.bagThread = threading.Thread(target = self.record_bag)
+                self.bagThread.start()
+                self.active = True        
+        elif not self.recording and self.active:
+            # Kill thread
+            self.bagThread.join()
+            self.active = False
+            rospy.loginfo("[data_logger] Finished recording")
 
 # "Main loop"
 if __name__ == "__main__":
-    node()
+    dl = Logger(socket.gethostname())
+    
+    # Run while ros is active
+    while not rospy.is_shutdown():
+        dl.run()
