@@ -1,3 +1,4 @@
+log_path: /home/pi/log
 topics: 
   - /mavros/global_position/raw/fix
   - /mavros/rc/in
