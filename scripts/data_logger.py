@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 
-from datetime import datetime
 import psutil
-import rosbag
 import rospy
-import rostopic
-import rosgraph
 import signal
 import socket
 import subprocess
 from system_monitor.msg import VehicleState
-import threading
 import os
 
 class Logger:
