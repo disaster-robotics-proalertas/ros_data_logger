@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 from datetime import datetime
+import psutil
 import rosbag
 import rospy
 import rostopic
 import rosgraph
+import signal
 import socket
+import subprocess
 from system_monitor.msg import VehicleState
 import threading
 import os
@@ -26,56 +29,47 @@ class Logger:
             rospy.loginfo("[data_logger] Log dir %s does not exist, creating..." % self.log_path)
             os.mkdir(self.log_path)
 
-        # Get list of topics to be recorded
-        self.topics = rospy.get_param("~topics")
-
         # Define subscribers for topics we want to record
-        for topic in self.topics:
-            msg_class, _, _ = rostopic.get_topic_class(topic)
-            rospy.Subscriber(topic, msg_class, callback=self.topic_callback)
-
-        # Dictionary to hold messages we want to record
-        self.messages = {}
+        self.topics = ''
+        self.record_all_topics = rospy.get_param("~record_all_topics")
+        if self.record_all_topics:
+            self.topics += '-a'
+        else:
+            # Get list of topics to be recorded
+            topicList = rospy.get_param("~topics")
+            for topic in topicList:
+                self.topics += '%s ' % topic
 
         # Recording state
         self.recording = False
         self.active = False
-        
-    def record_bag(self):
-        bagname = "%s/%s_%s.bag" % (self.log_path, self.vehicle_name, datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
-        bagfile = rosbag.Bag(bagname, 'w')
-        while True:
-            if not self.recording:
-                break
-            for topic in self.topics:
-                if self.messages[topic][1]:
-                    bagfile.write(topic, self.messages[topic][0])
-                    self.messages[topic][1] = False
-
-        # Close bag successfully
-        bagfile.close()
-
-    def topic_callback(self, msg):
-        self.messages[msg._connection_header['topic']] = [msg, True]
 
     def state_callback(self, msg):
         if msg.id == 3:
             self.recording = True
         else:
             self.recording = False
+    
+    def kill_proc(self, p):
+        process = psutil.Process(p.pid)
+        for sub_process in process.children(recursive=True):
+            sub_process.send_signal(signal.SIGINT)
+        # Wait for children to terminate
+        p.wait()
 
     def run(self):
         # Start or stop recording
         if self.recording:
             if not self.active:
-                # Run bag recording thread
+                # Run rosbag record process
                 rospy.loginfo("[data_logger] Recording data to %s" % self.log_path)
-                self.bagThread = threading.Thread(target = self.record_bag)
-                self.bagThread.start()
+                bagname = "%s/%s.bag" % (self.log_path, self.vehicle_name)
+                cmd = '/opt/ros/kinetic/bin/rosbag record %s -o %s' % (self.topics, bagname)
+                self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
                 self.active = True        
         elif not self.recording and self.active:
-            # Kill thread
-            self.bagThread.join()
+            # Kill rosbag record process
+            self.kill_proc(self.proc)
             self.active = False
             rospy.loginfo("[data_logger] Finished recording")
 
