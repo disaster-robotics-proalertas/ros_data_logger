@@ -1,4 +1,4 @@
-log_path: /home/renan/log
+log_path: /home/pi/log
 record_all_topics: true
 topics: 
   - /mavros/global_position/raw/fix
