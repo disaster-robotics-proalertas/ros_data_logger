@@ -2,6 +2,6 @@
     <arg name="system_name" />
     <node name="data_logger" pkg="ros_data_logger" type="data_logger.py">
         <param name="system_name" value="$(arg system_name)" />
-        <rosparam command="load" file="$(find ros_data_logger)/param/$(arg system_name).yaml" />
+        <rosparam command="load" file="$(find ros_data_logger)/param/vehicle.yaml" />
     </node>
 </launch>
