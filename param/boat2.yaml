@@ -1,5 +1,5 @@
 log_path: /home/pi/log
 record_all_topics: true
 topics: 
-  - /mavros/global_position/raw/fix
-  - /mavros/rc/in
+  - mavros/global_position/raw/fix
+  - mavros/rc/in
